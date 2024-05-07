@@ -18,12 +18,19 @@ else
 	exit 1
 fi
 
-$CONTAINER_TOOL build -t $1 --build-arg "NVIM_CONFIG_URL=$2" .
-$CONTAINER_TOOL volume rm --force $1
+IMAGE_NAME="nvim-setup-$1"
+EXECUTABLE_PATH="/usr/local/bin/$1"
+CONTAINER_ID_PATH="/tmp/container-id-$IMAGE_NAME"
 
-if [ -e "/usr/local/bin/$1" ]; then
+# Build the image and name it $1
+$CONTAINER_TOOL build -t $IMAGE_NAME --build-arg "NVIM_CONFIG_URL=$2" .
+
+# Force remove any existing volumes
+$CONTAINER_TOOL volume rm --force $IMAGE_NAME
+
+if [ -e $EXECUTABLE_PATH ]; then
 	# File exists, prompt the user if they want to overwrite it
-	read -p "File '/usr/local/bin/$1' already exists. Do you want to overwrite it? (y/n): " answer
+	read -p "File '$EXECUTABLE_PATH' already exists. Do you want to overwrite it? (y/n): " answer
 	if [ "$answer" != "y" ]; then
 		echo "Aborted. File not overwritten."
 		exit 0
@@ -31,21 +38,24 @@ if [ -e "/usr/local/bin/$1" ]; then
 fi
 
 # Add nvim alias to bashrc
-cat <<EOF | sudo tee /usr/local/bin/$1 >/dev/null
+cat <<EOF | sudo tee $EXECUTABLE_PATH >/dev/null
 #!/bin/bash
 
-rm -f /tmp/container_id_$1
-$CONTAINER_TOOL volume create $1
+rm -f $CONTAINER_ID_PATH
+$CONTAINER_TOOL volume create $IMAGE_NAME
 $CONTAINER_TOOL run \
-  --cidfile /tmp/container_id_$1 \
-  -v $1:/root/.local \
+  --cidfile $CONTAINER_ID_PATH \
+  -v $IMAGE_NAME:/root/.local \
   -v .:/root/dev \
   -v ~/.gitconfig:/root/.gitconfig \
   -it \
-  $1 \
+  $IMAGE_NAME \
   "\$@"
+
 echo "Committing changes to docker container:"
-$CONTAINER_TOOL container commit \$(cat /tmp/container_id_$1) $1
+
+$CONTAINER_TOOL container commit \
+  \$(cat $CONTAINER_ID_PATH) $IMAGE_NAME
 EOF
 
-sudo chmod +x /usr/local/bin/$1
+sudo chmod +x $EXECUTABLE_PATH
