@@ -60,7 +60,7 @@ RUN mkdir ~/.config && \
 WORKDIR /root/dev
 
 # Allow git to use /root/dev
-RUN git config --global --add safe.directory /root/dev
+RUN git config --system --add safe.directory /root/dev
 
 COPY entrypoint.sh /root/entrypoint.sh
 RUN chmod +x /root/entrypoint.sh
