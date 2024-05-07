@@ -41,21 +41,20 @@ fi
 cat <<EOF | sudo tee $EXECUTABLE_PATH >/dev/null
 #!/bin/bash
 
+# Remove any existing container id
 rm -f $CONTAINER_ID_PATH
+
+# Ensure the required volume exists
 $CONTAINER_TOOL volume create $IMAGE_NAME
-$CONTAINER_TOOL run \
-  --cidfile $CONTAINER_ID_PATH \
-  -v $IMAGE_NAME:/root/.local \
-  -v .:/root/dev \
-  -v ~/.gitconfig:/root/.gitconfig \
-  -it \
-  $IMAGE_NAME \
-  "\$@"
+
+# Run the container
+$CONTAINER_TOOL run --cidfile $CONTAINER_ID_PATH -v $IMAGE_NAME:/root/.local -v .:/root/dev -v ~/.gitconfig:/root/.gitconfig -it $IMAGE_NAME "\$@"
 
 echo "Committing changes to docker container:"
 
-$CONTAINER_TOOL container commit \
-  \$(cat $CONTAINER_ID_PATH) $IMAGE_NAME
+# Commit any changes to the container
+$CONTAINER_TOOL container commit \$(cat $CONTAINER_ID_PATH) $IMAGE_NAME
 EOF
 
+# Make sure the excutable is excutable
 sudo chmod +x $EXECUTABLE_PATH
